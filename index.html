@@ -1,0 +1,837 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Squad Tracker</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap');
+
+  :root {
+    --primary: #111827; --accent: #4F46E5; --accent-lt: #EEF2FF;
+    --gray: #6B7280; --light: #F3F4F6; --border: #E5E7EB; --white: #fff;
+    --yellow: #F59E0B; --c-ey: #111827; --c-client: #B45309;
+    --c-home: #1D4ED8; --c-ooo: #6D28D9; --r: 10px;
+    --sh: 0 1px 10px rgba(0,0,0,0.06);
+    --ev-team:#7C3AED; --ev-team-lt:#F5F3FF;
+    --ev-birthday:#DB2777; --ev-birthday-lt:#FDF2F8;
+    --ev-offsite:#059669; --ev-offsite-lt:#ECFDF5;
+    --ev-deadline:#DC2626; --ev-deadline-lt:#FEF2F2;
+    --ev-other:#6B7280; --ev-other-lt:#F3F4F6;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--light); color: var(--primary); min-height: 100vh; }
+
+  header { background: var(--primary); height: 52px; padding: 0 24px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 200; }
+  .logo { display: flex; align-items: center; gap: 10px; }
+  .logo-icon { width: 28px; height: 28px; border-radius: 8px; background: var(--accent); display: flex; align-items: center; justify-content: center; font-size: 15px; }
+  .logo-name { font-size: 14px; font-weight: 700; color: #fff; letter-spacing: -.3px; }
+  .hdr-actions { display: flex; gap: 7px; align-items: center; }
+
+  .btn { display: inline-flex; align-items: center; gap: 5px; padding: 7px 13px; border-radius: 8px; font-family: 'DM Sans', sans-serif; font-size: 12px; font-weight: 600; cursor: pointer; border: none; transition: all .15s; white-space: nowrap; }
+  .btn-primary { background: var(--accent); color: #fff; }
+  .btn-primary:hover { background: #4338CA; }
+  .btn-outline { background: #fff; color: var(--primary); border: 1.5px solid var(--border); }
+  .btn-outline:hover { border-color: var(--primary); }
+  .btn-ghost-hdr { background: transparent; color: rgba(255,255,255,.5); border: 1.5px solid rgba(255,255,255,.12); }
+  .btn-ghost-hdr:hover { color: #fff; border-color: rgba(255,255,255,.3); }
+  .btn-event { background: #fff; color: var(--ev-team); border: 1.5px solid #DDD6FE; }
+  .btn-event:hover { background: var(--ev-team-lt); }
+  .btn-sm { padding: 5px 10px; font-size: 11px; }
+  .btn-danger { background: #FEF2F2; color: #DC2626; border: 1.5px solid #FECACA; }
+
+  .container { max-width: 1380px; margin: 0 auto; padding: 18px 16px; }
+
+  .topbar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 14px; flex-wrap: wrap; gap: 10px; }
+  .topbar-left { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .topbar-right { display: flex; align-items: center; gap: 8px; }
+
+  .week-ctrl { display: flex; align-items: center; gap: 3px; background: #fff; border: 1.5px solid var(--border); border-radius: var(--r); padding: 3px; }
+  .wk-arrow { padding: 5px 9px; border: none; background: transparent; border-radius: 7px; cursor: pointer; color: var(--gray); font-size: 13px; transition: all .15s; }
+  .wk-arrow:hover { background: var(--light); color: var(--primary); }
+  .wk-label { font-size: 12px; font-weight: 600; padding: 0 10px; min-width: 140px; text-align: center; }
+  .wk-btn { padding: 5px 11px; border: none; background: transparent; border-radius: 7px; font-family: 'DM Sans', sans-serif; font-size: 11px; font-weight: 600; cursor: pointer; color: var(--gray); transition: all .15s; }
+  .wk-btn:hover { background: var(--light); }
+  .wk-btn.active { background: var(--primary); color: #fff; }
+
+  .view-toggle { display: flex; background: var(--light); border: 1.5px solid var(--border); border-radius: 8px; padding: 2px; }
+  .vt-btn { padding: 5px 12px; border: none; background: transparent; border-radius: 6px; font-family: 'DM Sans', sans-serif; font-size: 11px; font-weight: 600; cursor: pointer; color: var(--gray); transition: all .15s; }
+  .vt-btn.active { background: #fff; color: var(--primary); box-shadow: 0 1px 4px rgba(0,0,0,.08); }
+
+  .summary-bar { display: flex; gap: 8px; margin-bottom: 14px; flex-wrap: wrap; }
+  .sum-card { background: #fff; border: 1.5px solid var(--border); border-radius: 8px; padding: 8px 14px; font-size: 11px; color: var(--gray); display: flex; align-items: center; gap: 6px; }
+  .sum-card strong { font-size: 16px; font-weight: 700; color: var(--primary); }
+
+  /* SYNC STATUS */
+  .sync-badge { display: flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 500; padding: 4px 10px; border-radius: 20px; }
+  .sync-badge.synced { background: #ECFDF5; color: #059669; }
+  .sync-badge.syncing { background: #FFFBEB; color: #D97706; }
+  .sync-badge.error { background: #FEF2F2; color: #DC2626; }
+  .sync-dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; }
+  .sync-dot.pulse { animation: pulse 1.5s infinite; }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+  .legend { display: flex; gap: 12px; align-items: center; margin-bottom: 14px; flex-wrap: wrap; font-size: 11px; color: var(--gray); }
+  .legend strong { font-size: 11px; color: var(--primary); }
+  .li { display: flex; align-items: center; gap: 4px; }
+  .ldot { width: 8px; height: 8px; border-radius: 50%; }
+
+  .grid-wrap { background: #fff; border-radius: 12px; border: 1.5px solid var(--border); box-shadow: var(--sh); overflow: hidden; }
+
+  .events-row { display: grid; grid-template-columns: 160px repeat(5, 1fr); background: #FAFAFA; border-bottom: 2px solid var(--border); }
+  .events-row-label { padding: 6px 12px; font-size: 10px; font-weight: 700; color: var(--gray); text-transform: uppercase; letter-spacing: .5px; display: flex; align-items: center; border-right: 1px solid var(--border); }
+  .events-day-cell { padding: 5px 6px; border-left: 1px solid var(--border); min-height: 32px; display: flex; flex-direction: column; gap: 3px; justify-content: center; }
+  .events-day-cell.tod { background: #FEFCE8; }
+  .ev-pill { display: inline-flex; align-items: center; gap: 3px; padding: 2px 7px; border-radius: 20px; font-size: 10px; font-weight: 700; cursor: pointer; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+  .ev-pill:hover { filter: brightness(.93); }
+  .ev-team     { background: var(--ev-team-lt);     color: var(--ev-team); }
+  .ev-birthday { background: var(--ev-birthday-lt); color: var(--ev-birthday); }
+  .ev-offsite  { background: var(--ev-offsite-lt);  color: var(--ev-offsite); }
+  .ev-deadline { background: var(--ev-deadline-lt); color: var(--ev-deadline); }
+  .ev-other    { background: var(--ev-other-lt);    color: var(--ev-other); }
+
+  .pv-header { display: grid; grid-template-columns: 160px repeat(5, 1fr); background: var(--primary); }
+  .pv-h-person { padding: 11px 14px; font-size: 10px; font-weight: 700; color: rgba(255,255,255,.3); text-transform: uppercase; letter-spacing: .6px; }
+  .pv-h-day { padding: 9px 8px; border-left: 1px solid rgba(255,255,255,.07); text-align: center; }
+  .pv-h-day .dn { color: #fff; font-size: 12px; font-weight: 700; display: block; }
+  .pv-h-day .dd { color: var(--yellow); font-size: 10px; font-family: 'DM Mono', monospace; margin-top: 1px; display: block; }
+  .pv-h-day.tod { background: rgba(79,70,229,.3); }
+
+  .pv-row { display: grid; grid-template-columns: 160px repeat(5, 1fr); border-top: 1px solid var(--border); transition: background .1s; }
+  .pv-row:hover { background: #FAFAFA; }
+  .pv-person { padding: 7px 12px; display: flex; align-items: center; gap: 8px; }
+  .avatar { width: 26px; height: 26px; border-radius: 50%; background: var(--primary); color: #fff; font-size: 9px; font-weight: 700; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+  .pv-name { font-size: 12px; font-weight: 500; }
+  .pv-day { padding: 5px 7px; border-left: 1px solid var(--border); min-height: 66px; display: flex; flex-direction: column; justify-content: center; gap: 2px; }
+  .pv-day.tod { background: #FEFCE8; }
+  .pv-day.empty { align-items: center; }
+  .empty-dash { color: #D1D5DB; font-size: 11px; }
+  .cell-city { font-size: 9px; font-weight: 700; color: var(--gray); text-transform: uppercase; letter-spacing: .4px; margin-bottom: 2px; }
+  .slot { display: flex; align-items: center; gap: 3px; }
+  .sl { font-size: 9px; color: #D1D5DB; font-family: 'DM Mono', monospace; width: 11px; }
+  .chip { display: inline-flex; align-items: center; gap: 2px; padding: 2px 6px; border-radius: 20px; font-size: 10px; font-weight: 600; }
+  .chip.ey     { background: #11182710; color: var(--c-ey); }
+  .chip.client { background: #B4530910; color: var(--c-client); }
+  .chip.home   { background: #1D4ED810; color: var(--c-home); }
+  .chip.ooo    { background: #6D28D910; color: var(--c-ooo); }
+  .chip.faded  { opacity: .35; }
+  .cell-meal { font-size: 9px; color: var(--gray); margin-top: 2px; }
+
+  #cityView { display: none; }
+  .cv-day-block { border-top: 1px solid var(--border); }
+  .cv-day-block:first-child { border-top: none; }
+  .cv-day-hdr { display: grid; grid-template-columns: 110px 1fr; }
+  .cv-day-label { padding: 12px 14px; display: flex; flex-direction: column; justify-content: center; background: var(--light); border-right: 1px solid var(--border); }
+  .cv-day-name { font-size: 13px; font-weight: 700; }
+  .cv-day-date { font-size: 10px; font-family: 'DM Mono', monospace; color: var(--yellow); margin-top: 2px; }
+  .cv-day-label.tod-lbl { background: #FEFCE8; }
+  .cv-right { padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; }
+  .cv-events-strip { display: flex; gap: 5px; flex-wrap: wrap; }
+  .cv-cities-row { display: flex; gap: 10px; flex-wrap: wrap; }
+  .city-card { background: var(--light); border-radius: 8px; border: 1.5px solid var(--border); padding: 10px 12px; min-width: 150px; flex: 1; max-width: 210px; }
+  .city-card-name { font-size: 11px; font-weight: 700; margin-bottom: 6px; display: flex; align-items: center; justify-content: space-between; }
+  .city-count { font-size: 10px; font-weight: 700; background: var(--accent); color: #fff; border-radius: 20px; padding: 1px 7px; }
+  .city-person-row { display: flex; align-items: center; gap: 5px; padding: 3px 0; border-top: 1px solid var(--border); }
+  .city-person-row:first-of-type { border-top: none; }
+  .city-person-name { flex: 1; font-weight: 500; font-size: 11px; }
+  .mini-chips { display: flex; gap: 3px; }
+  .mini-chip { font-size: 9px; font-weight: 700; padding: 1px 5px; border-radius: 20px; }
+  .mc-ey     { background: #11182712; color: var(--c-ey); }
+  .mc-client { background: #B4530912; color: var(--c-client); }
+  .mc-home   { background: #1D4ED812; color: var(--c-home); }
+  .mc-ooo    { background: #6D28D912; color: var(--c-ooo); }
+
+  .grid-empty { padding: 44px; text-align: center; color: var(--gray); font-size: 13px; }
+
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(17,24,39,.55); z-index: 300; align-items: center; justify-content: center; backdrop-filter: blur(3px); }
+  .modal-overlay.open { display: flex; }
+  .modal { background: #fff; border-radius: 16px; width: 100%; max-width: 520px; margin: 12px; box-shadow: 0 20px 60px rgba(0,0,0,.2); max-height: 94vh; display: flex; flex-direction: column; overflow: hidden; }
+  .modal-hdr { padding: 15px 20px 12px; border-bottom: 1px solid var(--border); display: flex; align-items: flex-start; justify-content: space-between; flex-shrink: 0; }
+  .modal-title { font-size: 14px; font-weight: 700; }
+  .modal-sub { font-size: 11px; color: var(--gray); margin-top: 2px; }
+  .modal-x { width: 26px; height: 26px; border-radius: 50%; border: none; background: var(--light); cursor: pointer; font-size: 15px; display: flex; align-items: center; justify-content: center; color: var(--gray); }
+  .modal-x:hover { background: var(--border); }
+  .modal-body { padding: 15px 20px; overflow-y: auto; flex: 1; }
+  .modal-footer { padding: 12px 20px; border-top: 1px solid var(--border); display: flex; gap: 8px; justify-content: flex-end; flex-shrink: 0; }
+
+  .field { margin-bottom: 12px; }
+  .field label { display: block; font-size: 10px; font-weight: 700; color: var(--gray); margin-bottom: 4px; text-transform: uppercase; letter-spacing: .4px; }
+  .field select, .field input[type=text], .field input[type=date] { width: 100%; padding: 8px 11px; border: 1.5px solid var(--border); border-radius: var(--r); font-family: 'DM Sans', sans-serif; font-size: 13px; color: var(--primary); outline: none; transition: border-color .15s; }
+  .field select:focus, .field input:focus { border-color: var(--accent); }
+
+  .ev-type-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 5px; }
+  .ev-type-opt { padding: 8px 4px; border-radius: 8px; border: 1.5px solid var(--border); background: #fff; font-size: 11px; font-weight: 600; cursor: pointer; text-align: center; color: var(--gray); transition: all .12s; }
+  .ev-type-opt .ev-icon { font-size: 16px; display: block; margin-bottom: 3px; }
+  .ev-type-opt.sel-team     { border-color: var(--ev-team);     background: var(--ev-team-lt);     color: var(--ev-team); }
+  .ev-type-opt.sel-birthday { border-color: var(--ev-birthday); background: var(--ev-birthday-lt); color: var(--ev-birthday); }
+  .ev-type-opt.sel-offsite  { border-color: var(--ev-offsite);  background: var(--ev-offsite-lt);  color: var(--ev-offsite); }
+  .ev-type-opt.sel-deadline { border-color: var(--ev-deadline); background: var(--ev-deadline-lt); color: var(--ev-deadline); }
+  .ev-type-opt.sel-other    { border-color: var(--ev-other);    background: var(--ev-other-lt);    color: var(--ev-other); }
+
+  .date-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+  .toggle-row { display: flex; align-items: center; justify-content: space-between; padding: 10px 12px; background: var(--light); border-radius: 8px; }
+  .toggle-row label { font-size: 12px; font-weight: 500; }
+  .toggle-row small { font-size: 10px; color: var(--gray); }
+  input[type=checkbox] { width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; }
+
+  .ev-list { display: flex; flex-direction: column; gap: 5px; margin-top: 4px; }
+  .ev-list-item { display: flex; align-items: center; gap: 8px; padding: 8px 10px; border-radius: 8px; background: var(--light); }
+  .ev-list-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+  .ev-list-info { flex: 1; }
+  .ev-list-title { font-size: 12px; font-weight: 600; }
+  .ev-list-meta { font-size: 10px; color: var(--gray); margin-top: 1px; }
+  .ev-del { border: none; background: none; cursor: pointer; color: #D1D5DB; font-size: 16px; padding: 2px 5px; border-radius: 4px; }
+  .ev-del:hover { color: #EF4444; background: #FEF2F2; }
+
+  .bulk-bar { display: flex; gap: 6px; align-items: center; margin-bottom: 12px; padding: 8px 12px; background: var(--accent-lt); border-radius: 8px; border: 1.5px solid #C7D2FE; flex-wrap: wrap; }
+  .bulk-label { font-size: 11px; font-weight: 600; color: var(--accent); flex: 1; }
+  .bulk-btn { padding: 5px 10px; border-radius: 6px; border: 1.5px solid #C7D2FE; background: #fff; font-family: 'DM Sans', sans-serif; font-size: 11px; font-weight: 600; cursor: pointer; color: var(--accent); transition: all .15s; }
+  .bulk-btn:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+
+  .day-card { background: var(--light); border-radius: var(--r); padding: 10px 13px; margin-bottom: 8px; }
+  .day-card-hdr { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .day-card-title { font-size: 12px; font-weight: 700; }
+  .day-card-date { font-size: 10px; font-family: 'DM Mono', monospace; color: var(--gray); }
+  .copy-day-btn { font-size: 10px; font-weight: 600; color: var(--accent); background: var(--accent-lt); border: none; border-radius: 5px; padding: 3px 7px; cursor: pointer; }
+  .copy-day-btn:hover { background: var(--accent); color: #fff; }
+  .sec-lbl { font-size: 10px; font-weight: 700; color: var(--gray); text-transform: uppercase; letter-spacing: .4px; margin-bottom: 5px; }
+  .city-row { display: flex; gap: 4px; flex-wrap: wrap; margin-bottom: 8px; }
+  .city-chip { padding: 4px 9px; border-radius: 20px; border: 1.5px solid var(--border); background: #fff; font-size: 11px; font-weight: 500; cursor: pointer; color: var(--gray); transition: all .12s; white-space: nowrap; }
+  .city-chip:hover { border-color: var(--primary); color: var(--primary); }
+  .city-chip.sel { border-color: var(--primary); background: var(--primary); color: #fff; }
+  .city-custom { padding: 4px 10px; border: 1.5px solid var(--border); border-radius: 20px; font-family: 'DM Sans', sans-serif; font-size: 11px; outline: none; transition: border-color .15s; min-width: 80px; flex: 1; }
+  .city-custom:focus { border-color: var(--accent); }
+  .city-custom::placeholder { color: #D1D5DB; }
+  .slot-row { display: flex; align-items: center; gap: 7px; margin-bottom: 5px; }
+  .slot-tag { font-size: 11px; font-weight: 700; color: var(--gray); min-width: 52px; }
+  .loc-opts { display: flex; gap: 4px; flex: 1; flex-wrap: wrap; }
+  .loc-opt { flex: 1; min-width: 60px; padding: 5px 4px; border-radius: 7px; border: 1.5px solid var(--border); background: #fff; font-size: 11px; font-weight: 600; cursor: pointer; text-align: center; color: var(--gray); transition: all .12s; }
+  .loc-opt:hover { border-color: #9CA3AF; }
+  .loc-opt.s-ey     { border-color: var(--primary); background: var(--primary); color: #fff; }
+  .loc-opt.s-client { border-color: #D97706; background: #FFFBEB; color: var(--c-client); }
+  .loc-opt.s-home   { border-color: #3B82F6; background: #EFF6FF; color: var(--c-home); }
+  .loc-opt.s-ooo    { border-color: #6D28D9; background: #F5F3FF; color: var(--c-ooo); }
+  .loc-opt.s-same   { border-color: #9CA3AF; background: #F3F4F6; color: #6B7280; }
+  .meal-opts { display: flex; gap: 5px; margin-top: 8px; }
+  .meal-opt { flex: 1; padding: 5px 8px; border-radius: 7px; border: 1.5px solid var(--border); background: #fff; font-size: 11px; font-weight: 600; cursor: pointer; text-align: center; color: var(--gray); transition: all .12s; }
+  .meal-opt.sel { border-color: var(--primary); background: var(--light); color: var(--primary); }
+
+  .people-list { max-height: 240px; overflow-y: auto; margin-bottom: 10px; }
+  .people-item { display: flex; align-items: center; justify-content: space-between; padding: 7px 10px; border-radius: 8px; margin-bottom: 3px; background: var(--light); }
+  .people-item-name { font-size: 12px; font-weight: 500; display: flex; align-items: center; gap: 7px; }
+  .people-del { border: none; background: none; cursor: pointer; color: #D1D5DB; font-size: 16px; padding: 2px 5px; border-radius: 4px; }
+  .people-del:hover { color: #EF4444; background: #FEF2F2; }
+  .add-row { display: flex; gap: 7px; }
+  .add-row input { flex: 1; padding: 8px 11px; border: 1.5px solid var(--border); border-radius: var(--r); font-family: 'DM Sans', sans-serif; font-size: 13px; outline: none; }
+  .add-row input:focus { border-color: var(--accent); }
+
+  .toast { position: fixed; bottom: 20px; right: 20px; background: var(--primary); color: #fff; padding: 10px 16px; border-radius: var(--r); font-size: 12px; font-weight: 600; z-index: 999; transform: translateY(70px); opacity: 0; transition: all .3s; display: flex; align-items: center; gap: 7px; }
+  .toast.show { transform: translateY(0); opacity: 1; }
+  .toast-dot { width: 7px; height: 7px; border-radius: 50%; background: var(--yellow); flex-shrink: 0; }
+
+  ::-webkit-scrollbar { width: 5px; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo">
+    <div class="logo-icon">👥</div>
+    <span class="logo-name">Squad Tracker</span>
+  </div>
+  <div class="hdr-actions">
+    <div class="sync-badge syncing" id="syncBadge"><div class="sync-dot pulse"></div><span id="syncLabel">Cargando...</span></div>
+    <button class="btn btn-event btn-sm" onclick="openEventsModal()">🗓 Eventos</button>
+    <button class="btn btn-ghost-hdr btn-sm" onclick="openPeopleModal()">⚙ Equipo</button>
+    <button class="btn btn-primary btn-sm" onclick="openInputModal()">+ Mi semana</button>
+  </div>
+</header>
+
+<div class="container">
+  <div class="topbar">
+    <div class="topbar-left">
+      <div class="week-ctrl">
+        <button class="wk-arrow" onclick="changeWeek(-1)">←</button>
+        <span class="wk-label" id="weekLabel"></span>
+        <button class="wk-arrow" onclick="changeWeek(1)">→</button>
+      </div>
+      <div class="week-ctrl">
+        <button class="wk-btn active" onclick="setWkOffset(0,this)">Esta semana</button>
+        <button class="wk-btn" onclick="setWkOffset(1,this)">+1</button>
+        <button class="wk-btn" onclick="setWkOffset(2,this)">+2</button>
+        <button class="wk-btn" onclick="setWkOffset(3,this)">+3</button>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <div class="view-toggle">
+        <button class="vt-btn active" id="vt-person" onclick="setView('person')">👤 Por persona</button>
+        <button class="vt-btn" id="vt-city" onclick="setView('city')">📍 Por ciudad</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="summary-bar" id="summaryBar"></div>
+
+  <div class="legend">
+    <strong>Ubicación:</strong>
+    <div class="li"><div class="ldot" style="background:var(--c-ey)"></div> Oficina</div>
+    <div class="li"><div class="ldot" style="background:var(--c-client)"></div> Cliente</div>
+    <div class="li"><div class="ldot" style="background:var(--c-home)"></div> Casa</div>
+    <div class="li"><div class="ldot" style="background:var(--c-ooo)"></div> No disponible</div>
+    <span style="color:var(--border)">|</span>
+    <strong>Eventos:</strong>
+    <div class="li"><div class="ldot" style="background:var(--ev-team)"></div> Reunión</div>
+    <div class="li"><div class="ldot" style="background:var(--ev-birthday)"></div> Cumple</div>
+    <div class="li"><div class="ldot" style="background:var(--ev-offsite)"></div> Offsite</div>
+    <div class="li"><div class="ldot" style="background:var(--ev-deadline)"></div> Deadline</div>
+  </div>
+
+  <div class="grid-wrap">
+    <div id="personView">
+      <div class="pv-header" id="pvHeader"><div class="pv-h-person">Persona</div></div>
+      <div id="eventsRow"></div>
+      <div id="pvBody"></div>
+    </div>
+    <div id="cityView"></div>
+  </div>
+</div>
+
+<!-- EVENTS MODAL -->
+<div class="modal-overlay" id="eventsModal">
+  <div class="modal">
+    <div class="modal-hdr">
+      <div><div class="modal-title">🗓 Eventos del equipo</div><div class="modal-sub">Hitos visibles en el calendario para todos</div></div>
+      <button class="modal-x" onclick="closeModal('eventsModal')">×</button>
+    </div>
+    <div class="modal-body">
+      <div style="background:var(--light);border-radius:var(--r);padding:14px;margin-bottom:16px;">
+        <div style="font-size:12px;font-weight:700;margin-bottom:10px;">Añadir evento</div>
+        <div class="field">
+          <label>Tipo</label>
+          <div class="ev-type-grid" id="evTypeGrid">
+            <div class="ev-type-opt" data-type="team"     onclick="selEvType(this)"><span class="ev-icon">👥</span>Reunión</div>
+            <div class="ev-type-opt" data-type="birthday" onclick="selEvType(this)"><span class="ev-icon">🎂</span>Cumple</div>
+            <div class="ev-type-opt" data-type="offsite"  onclick="selEvType(this)"><span class="ev-icon">🌍</span>Offsite</div>
+            <div class="ev-type-opt" data-type="deadline" onclick="selEvType(this)"><span class="ev-icon">🔴</span>Deadline</div>
+            <div class="ev-type-opt" data-type="other"    onclick="selEvType(this)"><span class="ev-icon">📌</span>Otro</div>
+          </div>
+        </div>
+        <div class="field"><label>Título</label><input type="text" id="evTitle" placeholder="ej. All Hands Q2, Cumpleaños María..."></div>
+        <div class="date-row">
+          <div class="field"><label>Fecha inicio</label><input type="date" id="evDateStart"></div>
+          <div class="field"><label>Fecha fin (opcional)</label><input type="date" id="evDateEnd"></div>
+        </div>
+        <div class="toggle-row">
+          <div><label>Se repite cada año</label><div><small>Útil para cumpleaños</small></div></div>
+          <input type="checkbox" id="evRecurring">
+        </div>
+        <div style="margin-top:12px;"><button class="btn btn-primary" style="width:100%;" onclick="addEvent()">+ Añadir evento</button></div>
+      </div>
+      <div style="font-size:12px;font-weight:700;margin-bottom:8px;">Eventos guardados</div>
+      <div class="ev-list" id="evList"></div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-outline" onclick="closeModal('eventsModal')">Cerrar</button></div>
+  </div>
+</div>
+
+<!-- INPUT MODAL -->
+<div class="modal-overlay" id="inputModal">
+  <div class="modal">
+    <div class="modal-hdr">
+      <div><div class="modal-title">Mi semana</div><div class="modal-sub" id="inputSub"></div></div>
+      <button class="modal-x" onclick="closeModal('inputModal')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="field">
+        <label>Soy</label>
+        <select id="personSel" onchange="prefillWeek()"><option value="">— Selecciona tu nombre —</option></select>
+      </div>
+      <div class="bulk-bar">
+        <span class="bulk-label">⚡ Relleno rápido</span>
+        <button class="bulk-btn" onclick="bulkApplyFromMonday()">Igual que lunes → toda la semana</button>
+        <button class="bulk-btn" onclick="bulkCopyPrevWeek()">Copiar semana anterior</button>
+      </div>
+      <div id="weekInputGrid"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-outline" onclick="closeModal('inputModal')">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveWeek()">Guardar semana</button>
+    </div>
+  </div>
+</div>
+
+<!-- PEOPLE MODAL -->
+<div class="modal-overlay" id="peopleModal">
+  <div class="modal">
+    <div class="modal-hdr">
+      <div><div class="modal-title">Gestionar equipo</div><div class="modal-sub">Añade o elimina personas</div></div>
+      <button class="modal-x" onclick="closeModal('peopleModal')">×</button>
+    </div>
+    <div class="modal-body">
+      <div class="people-list" id="peopleList"></div>
+      <div class="add-row">
+        <input type="text" id="newPersonInput" placeholder="Nombre y apellido..." onkeydown="if(event.key==='Enter')addPerson()">
+        <button class="btn btn-primary" onclick="addPerson()">+ Añadir</button>
+      </div>
+    </div>
+    <div class="modal-footer"><button class="btn btn-primary" onclick="closeModal('peopleModal');syncFromSheets()">Listo</button></div>
+  </div>
+</div>
+
+<div class="toast" id="toast"><div class="toast-dot"></div><span id="toastMsg"></span></div>
+
+<script>
+// ── CONFIG ──
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbz25CfkcyqMZNQ6PsW6h0-jrazvk3phjmQjEcg_yaIW0JA_bTtiWNpssn0JMElep_n_/exec';
+const API_KEY    = 'AIzaSyCY9R6p3Jkw4CuzX9L9xD9NVnEo-wpLKkc';
+const SHEET_ID   = '1Gq3W3Pp8WS9vxzoVaStVgF_vHZt11FY-f0Bcrn9xHfQ';
+const BASE_URL   = `https://sheets.googleapis.com/v4/spreadsheets/${SHEET_ID}`;
+
+// ── CONSTANTS ──
+const CITIES   = ['Madrid','Barcelona','Bilbao','Sevilla','Valencia','México','Londres','Bruselas'];
+const LOCS     = [{key:'ey',icon:'🏢',label:'Oficina'},{key:'client',icon:'🤝',label:'Cliente'},{key:'home',icon:'🏠',label:'Casa'},{key:'ooo',icon:'🚫',label:'No disponible'}];
+const DAYS_ES  = ['Lunes','Martes','Miércoles','Jueves','Viernes'];
+const EV_TYPES = {
+  team:     {icon:'👥',label:'Reunión',  color:'var(--ev-team)'},
+  birthday: {icon:'🎂',label:'Cumple',   color:'var(--ev-birthday)'},
+  offsite:  {icon:'🌍',label:'Offsite',  color:'var(--ev-offsite)'},
+  deadline: {icon:'🔴',label:'Deadline', color:'var(--ev-deadline)'},
+  other:    {icon:'📌',label:'Otro',     color:'var(--ev-other)'},
+};
+
+// ── STATE ──
+let weekOffset   = 0;
+let currentView  = 'person';
+let people       = [];
+let planData     = {}; // key: "Person__YYYY-MM-DD"
+let events       = [];
+
+// ── SYNC STATUS ──
+function setSyncStatus(status, label) {
+  const badge = document.getElementById('syncBadge');
+  const dot   = badge.querySelector('.sync-dot');
+  const lbl   = document.getElementById('syncLabel');
+  badge.className = `sync-badge ${status}`;
+  dot.className   = `sync-dot${status==='syncing'?' pulse':''}`;
+  lbl.textContent = label;
+}
+
+// ── API: READ via Sheets API (GET, no CORS issue) ──
+async function sheetsGet(range) {
+  const url = `${BASE_URL}/values/${encodeURIComponent(range)}?key=${API_KEY}`;
+  const r = await fetch(url);
+  if (!r.ok) throw new Error(`Sheets GET error: ${r.status}`);
+  return r.json();
+}
+
+// ── API: WRITE via Apps Script (handles CORS + auth) ──
+async function scriptPost(payload) {
+  const r = await fetch(SCRIPT_URL, {
+    method: 'POST',
+    body: JSON.stringify(payload)
+  });
+  if (!r.ok) throw new Error(`Script POST error: ${r.status}`);
+  return r.json();
+}
+
+// ── SYNC FROM SHEETS ──
+async function syncFromSheets() {
+  setSyncStatus('syncing', 'Sincronizando...');
+  try {
+    const pRes = await sheetsGet('People!A2:A');
+    people = (pRes.values||[]).map(r=>r[0]).filter(Boolean);
+
+    const lRes = await sheetsGet('Locations!A2:F');
+    planData = {};
+    (lRes.values||[]).forEach(r => {
+      if (r[0] && r[1]) planData[`${r[0]}__${r[1]}`] = {city:r[2]||'', am:r[3]||'', pm:r[4]||'', meal:r[5]||''};
+    });
+
+    const eRes = await sheetsGet('Events!A2:E');
+    events = (eRes.values||[]).map((r,i) => ({
+      id: i, type: r[0]||'other', title: r[1]||'', start: r[2]||'',
+      end: r[3]||null, recurring: r[4]==='TRUE'
+    })).filter(e=>e.title);
+
+    setSyncStatus('synced', 'Sincronizado');
+    renderAll();
+  } catch(e) {
+    setSyncStatus('error', 'Error de conexión');
+    showToast('Error al cargar datos');
+    console.error(e);
+  }
+}
+
+// ── WRITE WEEK ──
+async function writeWeekToSheets(person, days, entries) {
+  setSyncStatus('syncing', 'Guardando...');
+  try {
+    const lRes = await sheetsGet('Locations!A2:F');
+    const rows = lRes.values || [];
+    const rowMap = {};
+    rows.forEach((r, i) => { if(r[0]&&r[1]) rowMap[`${r[0]}__${r[1]}`] = i+2; });
+
+    for (const entry of entries) {
+      const key = `${person}__${entry.date}`;
+      const rowData = [person, entry.date, entry.city||'', entry.am||'', entry.pm||'', entry.meal||''];
+      if (rowMap[key]) {
+        await scriptPost({action:'update', sheet:'Locations', key0:person, key1:entry.date, row:rowData});
+      } else {
+        await scriptPost({action:'append', sheet:'Locations', row:rowData});
+      }
+      planData[key] = {city:entry.city, am:entry.am, pm:entry.pm, meal:entry.meal};
+    }
+
+    setSyncStatus('synced', 'Guardado ✓');
+    renderAll();
+    showToast('✓ Semana guardada en Google Sheets');
+  } catch(e) {
+    setSyncStatus('error', 'Error al guardar');
+    showToast('Error al guardar. Comprueba la conexión.');
+    console.error(e);
+  }
+}
+
+// ── WRITE PERSON ──
+async function writePersonToSheets(name) {
+  try {
+    await scriptPost({action:'append', sheet:'People', row:[name]});
+  } catch(e) { console.error(e); }
+}
+
+// ── WRITE EVENT ──
+async function writeEventToSheets(ev) {
+  try {
+    await scriptPost({action:'append', sheet:'Events', row:[ev.type, ev.title, ev.start, ev.end||'', ev.recurring?'TRUE':'FALSE']});
+  } catch(e) { console.error(e); }
+}
+
+// ── DELETE EVENT ──
+async function deleteEventFromSheets(idx) {
+  try {
+    const remaining = events.filter((_,i)=>i!==idx);
+    await scriptPost({action:'rewrite', sheet:'Events', rows: remaining.map(e=>[e.type,e.title,e.start,e.end||'',e.recurring?'TRUE':'FALSE'])});
+    events = remaining.map((e,i)=>({...e,id:i}));
+    renderAll(); renderEvList();
+    setSyncStatus('synced','Sincronizado');
+    showToast('Evento eliminado');
+  } catch(e) { showToast('Error al eliminar evento'); console.error(e); }
+}
+
+// ── DATE UTILS ──
+function getMonday(off=0){const d=new Date(),day=d.getDay(),m=new Date(d);m.setDate(d.getDate()-day+(day===0?-6:1)+off*7);m.setHours(0,0,0,0);return m;}
+function getWeekDays(off=0){const m=getMonday(off);return Array.from({length:5},(_,i)=>{const d=new Date(m);d.setDate(m.getDate()+i);return d;});}
+function fmt(d){return d.toISOString().split('T')[0];}
+function fmtD(d){return d.toLocaleDateString('es-ES',{day:'2-digit',month:'2-digit'});}
+function fmtW(d){return d.toLocaleDateString('es-ES',{weekday:'short'}).replace('.','').toUpperCase();}
+function isToday(d){const t=new Date();t.setHours(0,0,0,0);return d.getTime()===t.getTime();}
+function initials(n){return n.split(' ').map(w=>w[0]).join('').substring(0,2).toUpperCase();}
+function eventOnDate(ev, dateStr) {
+  const d=new Date(dateStr+'T00:00:00'),start=new Date(ev.start+'T00:00:00'),end=ev.end?new Date(ev.end+'T00:00:00'):start;
+  if(ev.recurring){const ds=dateStr.substring(5),ss=ev.start.substring(5),es=ev.end?ev.end.substring(5):ss;return ds>=ss&&ds<=es;}
+  return d>=start&&d<=end;
+}
+
+// ── RENDER ALL ──
+function renderAll() {
+  const days=getWeekDays(weekOffset);
+  document.getElementById('weekLabel').textContent=`${fmtD(days[0])} – ${fmtD(days[4])}`;
+  renderSummary(days);
+  if(currentView==='person') renderPersonView(days);
+  else renderCityView(days);
+}
+
+function renderSummary(days) {
+  let filled=0; const total=people.length*5;
+  days.forEach(d=>people.forEach(p=>{if(planData[`${p}__${fmt(d)}`])filled++;}));
+  const cities=new Set();
+  days.forEach(d=>people.forEach(p=>{const e=planData[`${p}__${fmt(d)}`];if(e&&e.city)cities.add(e.city);}));
+  const today=days.find(d=>isToday(d));
+  let todayCount=0; if(today)people.forEach(p=>{if(planData[`${p}__${fmt(today)}`])todayCount++;});
+  const weekEvs=events.filter(ev=>days.some(d=>eventOnDate(ev,fmt(d))));
+  const pct=total>0?Math.round(filled/total*100):0;
+  document.getElementById('summaryBar').innerHTML=`
+    <div class="sum-card"><strong>${people.length}</strong><span>personas</span></div>
+    <div class="sum-card"><strong>${todayCount}</strong><span>con ubicación hoy</span></div>
+    <div class="sum-card"><strong>${cities.size}</strong><span>ciudades esta semana</span></div>
+    <div class="sum-card"><strong>${weekEvs.length}</strong><span>eventos esta semana</span></div>
+    <div class="sum-card"><strong>${pct}%</strong><span>semana completada</span></div>`;
+}
+
+function renderEventsRow(days) {
+  const hasAny=days.some(d=>events.some(ev=>eventOnDate(ev,fmt(d))));
+  if(!hasAny){document.getElementById('eventsRow').innerHTML='';return;}
+  document.getElementById('eventsRow').innerHTML=`<div class="events-row">
+    <div class="events-row-label">Eventos</div>
+    ${days.map(d=>`<div class="events-day-cell ${isToday(d)?'tod':''}">
+      ${events.filter(ev=>eventOnDate(ev,fmt(d))).map(ev=>`<div class="ev-pill ev-${ev.type}" onclick="openEventsModal()">${EV_TYPES[ev.type].icon} ${ev.title}</div>`).join('')}
+    </div>`).join('')}
+  </div>`;
+}
+
+function renderPersonView(days) {
+  document.getElementById('personView').style.display='block';
+  document.getElementById('cityView').style.display='none';
+  document.getElementById('pvHeader').innerHTML=`<div class="pv-h-person">Persona</div>`+days.map(d=>`<div class="pv-h-day ${isToday(d)?'tod':''}"><span class="dn">${fmtW(d)}</span><span class="dd">${fmtD(d)}</span></div>`).join('');
+  renderEventsRow(days);
+  const body=document.getElementById('pvBody');
+  if(!people.length){body.innerHTML=`<div class="grid-empty">Añade personas al equipo para empezar<br><small style="color:#9CA3AF;display:block;margin-top:6px">Usa "⚙ Equipo" arriba</small></div>`;return;}
+  body.innerHTML=people.map(person=>{
+    const cells=days.map(d=>{
+      const e=planData[`${person}__${fmt(d)}`],tc=isToday(d)?'tod':'';
+      if(!e)return`<div class="pv-day ${tc} empty"><span class="empty-dash">—</span></div>`;
+      const am=LOCS.find(l=>l.key===e.am),pm=e.pm?LOCS.find(l=>l.key===e.pm):null;
+      const amC=am?`<div class="chip ${am.key}">${am.icon} ${am.label}</div>`:'';
+      const pmC=pm?`<div class="chip ${pm.key}">${pm.icon} ${pm.label}</div>`:(am?`<div class="chip ${am.key} faded">${am.icon}</div>`:'');
+      const meal=e.meal==='plan'?`<div class="cell-meal">🍽 Con plan</div>`:'';
+      const isFri=d.getDay()===5;
+      return`<div class="pv-day ${tc}">
+        ${e.city?`<div class="cell-city">📍 ${e.city}</div>`:''}
+        <div class="slot"><span class="sl">M</span>${amC}</div>
+        ${!isFri?`<div class="slot"><span class="sl">T</span>${pmC}</div>`:''}
+        ${meal}
+      </div>`;
+    }).join('');
+    return`<div class="pv-row"><div class="pv-person"><div class="avatar">${initials(person)}</div><div class="pv-name">${person}</div></div>${cells}</div>`;
+  }).join('');
+}
+
+function renderCityView(days) {
+  document.getElementById('personView').style.display='none';
+  document.getElementById('cityView').style.display='block';
+  if(!people.length){document.getElementById('cityView').innerHTML=`<div class="grid-empty">Añade personas para empezar</div>`;return;}
+  document.getElementById('cityView').innerHTML=days.map(d=>{
+    const tc=isToday(d)?'tod-lbl':'';
+    const dayEvs=events.filter(ev=>eventOnDate(ev,fmt(d)));
+    const evStrip=dayEvs.length?`<div class="cv-events-strip">${dayEvs.map(ev=>`<div class="ev-pill ev-${ev.type}">${EV_TYPES[ev.type].icon} ${ev.title}</div>`).join('')}</div>`:'';
+    const cityMap={};
+    people.forEach(person=>{
+      const e=planData[`${person}__${fmt(d)}`];if(!e)return;
+      const city=e.city||'Sin ciudad';
+      if(!cityMap[city])cityMap[city]=[];
+      cityMap[city].push({person,am:e.am,pm:e.pm,meal:e.meal});
+    });
+    const noData=!Object.keys(cityMap).length;
+    const citiesHTML=noData?`<div style="color:#9CA3AF;font-size:12px;">Sin datos</div>`:
+      Object.entries(cityMap).sort((a,b)=>b[1].length-a[1].length).map(([city,entries])=>`
+        <div class="city-card">
+          <div class="city-card-name">📍 ${city}<span class="city-count">${entries.length}</span></div>
+          ${entries.map(e=>{
+            const am=LOCS.find(l=>l.key===e.am),pm=e.pm?LOCS.find(l=>l.key===e.pm):null;
+            const isFri=d.getDay()===5,meal=e.meal==='plan'?'🍽':'';
+            return`<div class="city-person-row">
+              <div class="avatar" style="width:20px;height:20px;font-size:8px;flex-shrink:0;">${initials(e.person)}</div>
+              <span class="city-person-name">${e.person}</span>
+              <div class="mini-chips">
+                ${am?`<span class="mini-chip mc-${am.key}">M:${am.label}</span>`:''}
+                ${(!isFri&&pm)?`<span class="mini-chip mc-${pm.key}">T:${pm.label}</span>`:''}
+                ${meal?`<span style="font-size:11px;">${meal}</span>`:''}
+              </div>
+            </div>`;
+          }).join('')}
+        </div>`).join('');
+    return`<div class="cv-day-block"><div class="cv-day-hdr">
+      <div class="cv-day-label ${tc}"><span class="cv-day-name">${fmtW(d)}</span><span class="cv-day-date">${fmtD(d)}</span></div>
+      <div class="cv-right">${evStrip}<div class="cv-cities-row">${citiesHTML}</div></div>
+    </div></div>`;
+  }).join('');
+}
+
+function setView(v){currentView=v;document.getElementById('vt-person').classList.toggle('active',v==='person');document.getElementById('vt-city').classList.toggle('active',v==='city');renderAll();}
+function changeWeek(d){weekOffset+=d;renderAll();}
+function setWkOffset(n,btn){weekOffset=n;document.querySelectorAll('.wk-btn').forEach(b=>b.classList.remove('active'));btn.classList.add('active');renderAll();}
+
+// ── EVENTS ──
+function openEventsModal(){renderEvList();document.getElementById('eventsModal').classList.add('open');}
+function selEvType(el){document.querySelectorAll('.ev-type-opt').forEach(o=>o.className='ev-type-opt');el.classList.add(`sel-${el.dataset.type}`);}
+
+async function addEvent() {
+  const typeEl=document.querySelector('.ev-type-opt[class*="sel-"]');
+  const title=document.getElementById('evTitle').value.trim();
+  const start=document.getElementById('evDateStart').value;
+  const end=document.getElementById('evDateEnd').value;
+  const recurring=document.getElementById('evRecurring').checked;
+  if(!typeEl){showToast('Selecciona un tipo');return;}
+  if(!title){showToast('Escribe un título');return;}
+  if(!start){showToast('Selecciona una fecha');return;}
+  const ev={id:Date.now(),type:typeEl.dataset.type,title,start,end:end||null,recurring};
+  setSyncStatus('syncing','Guardando...');
+  await writeEventToSheets(ev);
+  events.push(ev);
+  document.querySelectorAll('.ev-type-opt').forEach(o=>o.className='ev-type-opt');
+  document.getElementById('evTitle').value='';
+  document.getElementById('evDateStart').value='';
+  document.getElementById('evDateEnd').value='';
+  document.getElementById('evRecurring').checked=false;
+  setSyncStatus('synced','Guardado ✓');
+  renderEvList();renderAll();showToast('✓ Evento añadido');
+}
+
+function renderEvList() {
+  const list=document.getElementById('evList');
+  if(!events.length){list.innerHTML=`<div style="color:#9CA3AF;font-size:12px;text-align:center;padding:16px;">Sin eventos todavía.</div>`;return;}
+  list.innerHTML=[...events].sort((a,b)=>a.start.localeCompare(b.start)).map((ev,i)=>{
+    const t=EV_TYPES[ev.type],rec=ev.recurring?' · 🔁 anual':'';
+    const dateStr=ev.end&&ev.end!==ev.start?`${ev.start} → ${ev.end}`:ev.start;
+    return`<div class="ev-list-item">
+      <div class="ev-list-dot" style="background:${t.color}"></div>
+      <div class="ev-list-info"><div class="ev-list-title">${t.icon} ${ev.title}</div><div class="ev-list-meta">${dateStr}${rec}</div></div>
+      <button class="ev-del" onclick="deleteEventFromSheets(${i})">×</button>
+    </div>`;
+  }).join('');
+}
+
+// ── INPUT MODAL ──
+function openInputModal() {
+  if(!people.length){showToast('Primero añade personas al equipo');openPeopleModal();return;}
+  const days=getWeekDays(weekOffset);
+  document.getElementById('inputSub').textContent=`Semana del ${fmtD(days[0])} al ${fmtD(days[4])}`;
+  document.getElementById('personSel').innerHTML=`<option value="">— Selecciona tu nombre —</option>`+people.map(p=>`<option value="${p}">${p}</option>`).join('');
+  buildDayCards(days);
+  document.getElementById('inputModal').classList.add('open');
+}
+
+function buildDayCards(days) {
+  document.getElementById('weekInputGrid').innerHTML=days.map((d,i)=>{
+    const ds=fmt(d);
+    return`<div class="day-card">
+      <div class="day-card-hdr">
+        <span class="day-card-title">${DAYS_ES[i]}</span>
+        <div style="display:flex;gap:5px;align-items:center;">
+          <span class="day-card-date">${fmtD(d)}</span>
+          ${i>0?`<button class="copy-day-btn" onclick="copyPrevDay('${ds}',${i})">= Igual que ${DAYS_ES[i-1]}</button>`:''}
+        </div>
+      </div>
+      <div class="sec-lbl">Ciudad</div>
+      <div class="city-row" id="cityRow-${ds}">
+        ${CITIES.map(c=>`<div class="city-chip" data-date="${ds}" data-city="${c}" onclick="selCity(this,'${ds}')">${c}</div>`).join('')}
+        <input class="city-custom" id="cityCustom-${ds}" placeholder="Otra ciudad..." oninput="onCustomCity(this,'${ds}')">
+      </div>
+      <div class="sec-lbl">Ubicación</div>
+      <div class="slot-row">
+        <span class="slot-tag">Mañana</span>
+        <div class="loc-opts" id="am-${ds}">
+          ${LOCS.map(l=>`<div class="loc-opt" data-date="${ds}" data-slot="am" data-loc="${l.key}" onclick="selLoc(this,'${ds}','am')">${l.icon} ${l.label}</div>`).join('')}
+        </div>
+      </div>
+      ${i<4?`<div class="slot-row">
+        <span class="slot-tag" style="color:#D1D5DB;">Tarde</span>
+        <div class="loc-opts" id="pm-${ds}">
+          <div class="loc-opt s-same" data-date="${ds}" data-slot="pm" data-loc="same" onclick="selLoc(this,'${ds}','pm')">= Igual</div>
+          ${LOCS.map(l=>`<div class="loc-opt" data-date="${ds}" data-slot="pm" data-loc="${l.key}" onclick="selLoc(this,'${ds}','pm')">${l.icon} ${l.label}</div>`).join('')}
+        </div>
+      </div>`:`<div id="pm-${ds}"></div>`}
+      <div class="sec-lbl" style="margin-top:8px;">Comida</div>
+      <div class="meal-opts">
+        <div class="meal-opt" data-date="${ds}" data-meal="plan" onclick="selMeal(this,'${ds}')">🍽 Con plan</div>
+        <div class="meal-opt" data-date="${ds}" data-meal="none" onclick="selMeal(this,'${ds}')">— Sin plan</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── BULK ──
+function bulkApplyFromMonday(){
+  const days=getWeekDays(weekOffset),ds0=fmt(days[0]);
+  const city=getSelCity(ds0),am=getSelLoc(ds0,'am'),pm=getSelLocRaw(ds0,'pm'),meal=getSelMeal(ds0);
+  if(!city&&!am){showToast('Rellena primero el lunes');return;}
+  days.slice(1).forEach(d=>applyToCard(fmt(d),city,am,pm,meal));
+  showToast('✓ Lunes aplicado al resto de la semana');
+}
+function bulkCopyPrevWeek(){
+  const person=document.getElementById('personSel').value;
+  if(!person){showToast('Selecciona tu nombre primero');return;}
+  const days=getWeekDays(weekOffset),prev=getWeekDays(weekOffset-1);
+  let copied=0;
+  days.forEach((d,i)=>{const e=planData[`${person}__${fmt(prev[i])}`];if(!e)return;applyToCard(fmt(d),e.city,e.am,e.pm,e.meal);copied++;});
+  copied===0?showToast('Sin datos la semana anterior'):showToast(`✓ ${copied} días copiados`);
+}
+function copyPrevDay(ds,idx){const days=getWeekDays(weekOffset),pds=fmt(days[idx-1]);applyToCard(ds,getSelCity(pds),getSelLoc(pds,'am'),getSelLocRaw(pds,'pm'),getSelMeal(pds));}
+
+function applyToCard(ds,city,am,pm,meal){
+  document.querySelectorAll(`#cityRow-${ds} .city-chip`).forEach(c=>c.classList.remove('sel'));
+  const cc=document.querySelector(`#cityRow-${ds} [data-city="${city}"]`);
+  if(cc){cc.classList.add('sel');document.getElementById(`cityCustom-${ds}`).value='';}
+  else if(city){document.getElementById(`cityCustom-${ds}`).value=city;}
+  document.querySelectorAll(`#am-${ds} .loc-opt`).forEach(o=>o.className='loc-opt');
+  if(am){const el=document.querySelector(`#am-${ds} [data-loc="${am}"]`);if(el)el.classList.add(`s-${am}`);}
+  const pmContainer=document.getElementById(`pm-${ds}`);
+  if(pmContainer&&pmContainer.children.length){
+    document.querySelectorAll(`#pm-${ds} .loc-opt`).forEach(o=>o.className='loc-opt'+(o.dataset.loc==='same'?' s-same':''));
+    const pmL=pm||'same',pmel=document.querySelector(`#pm-${ds} [data-loc="${pmL}"]`);
+    if(pmel)pmel.classList.add(pmL==='same'?'s-same':`s-${pmL}`);
+  }
+  document.querySelectorAll(`[data-date="${ds}"][data-meal]`).forEach(m=>m.classList.remove('sel'));
+  if(meal){const mel=document.querySelector(`[data-date="${ds}"][data-meal="${meal}"]`);if(mel)mel.classList.add('sel');}
+}
+
+function getSelCity(ds){const cc=document.querySelector(`#cityRow-${ds} .city-chip.sel`);return cc?cc.dataset.city:(document.getElementById(`cityCustom-${ds}`)?.value.trim()||'');}
+function getSelLoc(ds,slot){const el=document.querySelector(`#${slot}-${ds} .loc-opt[class*="s-ey"],#${slot}-${ds} .loc-opt[class*="s-client"],#${slot}-${ds} .loc-opt[class*="s-home"],#${slot}-${ds} .loc-opt[class*="s-ooo"]`);return el?el.dataset.loc:null;}
+function getSelLocRaw(ds,slot){const el=document.querySelector(`#${slot}-${ds} .loc-opt[class*="s-"]`);return el?el.dataset.loc:null;}
+function getSelMeal(ds){const el=document.querySelector(`[data-date="${ds}"][data-meal].sel`);return el?el.dataset.meal:null;}
+function selCity(el,ds){document.querySelectorAll(`#cityRow-${ds} .city-chip`).forEach(c=>c.classList.remove('sel'));el.classList.add('sel');document.getElementById(`cityCustom-${ds}`).value='';}
+function onCustomCity(inp,ds){if(inp.value.trim())document.querySelectorAll(`#cityRow-${ds} .city-chip`).forEach(c=>c.classList.remove('sel'));}
+function selLoc(el,ds,slot){document.querySelectorAll(`#${slot}-${ds} .loc-opt`).forEach(o=>o.className='loc-opt'+(o.dataset.loc==='same'?' s-same':''));el.classList.add(el.dataset.loc==='same'?'s-same':`s-${el.dataset.loc}`);}
+function selMeal(el,ds){document.querySelectorAll(`[data-date="${ds}"][data-meal]`).forEach(m=>m.classList.remove('sel'));el.classList.add('sel');}
+
+function prefillWeek(){
+  const person=document.getElementById('personSel').value;if(!person)return;
+  getWeekDays(weekOffset).forEach(d=>{const e=planData[`${person}__${fmt(d)}`];if(!e)return;applyToCard(fmt(d),e.city,e.am,e.pm,e.meal);});
+}
+
+async function saveWeek() {
+  const person=document.getElementById('personSel').value;
+  if(!person){showToast('Selecciona tu nombre');return;}
+  const entries=[];
+  getWeekDays(weekOffset).forEach(d=>{
+    const ds=fmt(d),city=getSelCity(ds),am=getSelLoc(ds,'am');
+    const pmRaw=getSelLocRaw(ds,'pm'),pm=(pmRaw&&pmRaw!=='same')?pmRaw:null;
+    const meal=getSelMeal(ds);
+    if(city||am) entries.push({date:ds,city,am,pm,meal});
+  });
+  if(!entries.length){showToast('No hay datos para guardar');return;}
+  closeModal('inputModal');
+  await writeWeekToSheets(person,getWeekDays(weekOffset),entries);
+}
+
+// ── PEOPLE ──
+function openPeopleModal(){renderPeopleList();document.getElementById('peopleModal').classList.add('open');}
+function renderPeopleList(){
+  const list=document.getElementById('peopleList');
+  if(!people.length){list.innerHTML=`<div style="text-align:center;padding:20px;color:#9CA3AF;font-size:12px;">Sin personas aún.</div>`;return;}
+  list.innerHTML=people.map((p,i)=>`<div class="people-item">
+    <div class="people-item-name"><div class="avatar" style="width:24px;height:24px;font-size:9px;">${initials(p)}</div>${p}</div>
+    <button class="people-del" onclick="removePerson(${i})">×</button>
+  </div>`).join('');
+}
+
+async function addPerson(){
+  const inp=document.getElementById('newPersonInput'),name=inp.value.trim();
+  if(!name)return;
+  if(people.includes(name)){showToast('Ya existe');return;}
+  people.push(name);
+  inp.value='';
+  renderPeopleList();
+  await writePersonToSheets(name);
+  showToast(`✓ ${name} añadido al equipo`);
+}
+
+async function removePerson(i){
+  if(!confirm(`¿Eliminar a ${people[i]}?`))return;
+  people.splice(i,1);
+  // Rewrite People sheet
+  try {
+    await scriptPost({action:'rewrite', sheet:'People', rows: people.map(p=>[p])});
+  } catch(e){console.error(e);}
+  renderPeopleList();
+}
+
+function closeModal(id){document.getElementById(id).classList.remove('open');}
+function showToast(msg){const t=document.getElementById('toast');document.getElementById('toastMsg').textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),2800);}
+
+// ── INIT ──
+syncFromSheets();
+</script>
+</body>
+</html>
